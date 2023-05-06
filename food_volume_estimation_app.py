@@ -121,11 +121,15 @@ if __name__ == '__main__':
                         help='Plate adjustment relaxation parameter.',
                         metavar='<relaxation_param>',
                         default=0.01)
+    parser.add_argument('--port', type=int,
+                        help='Port the app will run on.',
+                        metavar='<port>',
+                        default=8080)
     args = parser.parse_args()
 
     load_volume_estimator(args.depth_model_architecture,
                           args.depth_model_weights, 
                           args.segmentation_model_weights,
                           relaxation_param=args.relaxation_param)
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=args.port)
 
