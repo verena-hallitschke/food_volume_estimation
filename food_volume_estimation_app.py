@@ -12,10 +12,9 @@ import base64
 
 app = Flask(__name__)
 estimator = None
-density_db = None
 
 def load_volume_estimator(depth_model_architecture, depth_model_weights,
-        segmentation_model_weights, density_db_source):
+        segmentation_model_weights, relaxation_param: float = 0.01):
     """Loads volume estimator object and sets up its parameters."""
     # Create estimator object and intialize
     global estimator
@@ -51,15 +50,12 @@ def load_volume_estimator(depth_model_architecture, depth_model_weights,
     # Create segmentator object
     estimator.segmentator = FoodSegmentator(segmentation_model_weights)
     # Set plate adjustment relaxation parameter
-    estimator.relax_param = 0.01
+    estimator.relax_param = relaxation_param
 
     # Need to define default graph due to Flask multiprocessing
     global graph
     graph = tf.get_default_graph()
 
-    # Load food density database
-    global density_db
-    density_db = DensityDatabase(density_db_source)
 
 @app.route('/predict', methods=['POST'])
 def volume_estimation():
@@ -85,11 +81,6 @@ def volume_estimation():
     except Exception as e:
         abort(406)
 
-    # Get food type
-    try:
-        food_type = content['food_type']
-    except Exception as e:
-        abort(406)
 
     # Get expected plate diameter from form data or set to 0 and ignore
     try:
@@ -103,18 +94,10 @@ def volume_estimation():
             plate_diameter_prior=plate_diameter)
     # Convert to mL
     volumes = [v * 1e6 for v in volumes]
-    
-    # Convert volumes to weight - assuming a single food type
-    db_entry = density_db.query(food_type)
-    density = db_entry[1]
-    weight = 0
-    for v in volumes:
-        weight += v * density
 
     # Return values
     return_vals = {
-        'food_type_match': db_entry[0],
-        'weight': weight
+        'volumes': volumes,
     }
     return make_response(jsonify(return_vals), 200)
 
@@ -134,16 +117,15 @@ if __name__ == '__main__':
                         help='Path to segmentation model weights (.h5).',
                         metavar='/path/to/segmentation/weights.h5',
                         required=True)
-    parser.add_argument('--density_db_source', type=str,
-                        help=('Path to food density database (.xlsx) ' +
-                              'or Google Sheets ID.'),
-                        metavar='/path/to/plot/database.xlsx or <ID>',
-                        required=True)
+    parser.add_argument('--relaxation_param', type=float,
+                        help='Plate adjustment relaxation parameter.',
+                        metavar='<relaxation_param>',
+                        default=0.01)
     args = parser.parse_args()
 
     load_volume_estimator(args.depth_model_architecture,
                           args.depth_model_weights, 
                           args.segmentation_model_weights,
-                          args.density_db_source)
+                          relaxation_param=args.relaxation_param)
     app.run(host='0.0.0.0')
 
