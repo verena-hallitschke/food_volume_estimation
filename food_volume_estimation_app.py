@@ -75,8 +75,12 @@ def volume_estimation():
         content = request.json
         img_encoded = content['img']
         jpg_original = base64.b64decode(img_encoded)
+        print("Test 1")
         img_arr = np.frombuffer(jpg_original, dtype=np.uint8)
+        print("Test 2")
         img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+        print("Test 3")
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     except Exception as e:
         print(e)
         abort(406)
