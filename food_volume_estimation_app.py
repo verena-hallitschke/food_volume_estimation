@@ -90,7 +90,7 @@ def volume_estimation():
 
     # Estimate volumes
     with graph.as_default():
-        volumes = estimator.estimate_volume(img, fov=70,
+        volumes = estimator.estimate_volume(img, fov=content.get("fov", 70),
             plate_diameter_prior=plate_diameter)
     # Convert to mL
     volumes = [v * 1e6 for v in volumes]
